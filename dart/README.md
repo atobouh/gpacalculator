@@ -1,27 +1,23 @@
-# Dart Section
+# Dart Projects
 
-This section contains all Dart-based projects in this repository.
-
-## Projects
+## Included Project
 
 - `flutter_gpa_calculator/`
-  - Flutter application project (UI app)
-- `console_gpa_calculator/`
-  - Dart console GPA calculator
-  - Supports manual entry, CSV import, CSV export, pass/fail status, and custom save path
+  - Modern Flutter GPA calculator app
+  - Uses Dart OOP models/services and higher-order functions
 
-## Run Commands
-
-### Flutter project
+## Run
 
 ```powershell
 cd "dart/flutter_gpa_calculator"
+flutter pub get
 flutter run
 ```
 
-### Console project
+## Quality Checks
 
 ```powershell
-cd "dart/console_gpa_calculator"
-dart run
+cd "dart/flutter_gpa_calculator"
+flutter analyze
+flutter test
 ```
