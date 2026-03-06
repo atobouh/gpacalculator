@@ -48,6 +48,22 @@ flutter run
 dart exercies/dart/run_all_exercises.dart
 ```
 
+## Releases
+
+This repository includes a GitHub Actions workflow at `.github/workflows/mobile-release.yml`.
+
+- Trigger: push a tag matching `v*` (example: `v1.0.0`).
+- Output:
+  - Android release APK
+  - iOS unsigned `Runner.app` zip
+
+Tag and publish a release:
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## Review Notes
 
 - Commits are intentionally split into small, review-friendly units.
