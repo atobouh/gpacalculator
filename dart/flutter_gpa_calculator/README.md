@@ -6,9 +6,10 @@ visual interface using Dart OOP, higher-order functions, and lambdas.
 ## Features
 
 - Modern responsive UI (cards, summary panels, table, status chips)
+- Student name input shown directly in the dashboard
 - Manual course entry (`subject + grade`)
 - CSV upload/import (`Subject,Grade`)
-- CSV export to file with save-location picker
+- CSV export to file with save-location picker (includes student name)
 - GPA and pass/fail status calculation
 - Course ranking and pass/fail breakdown
 

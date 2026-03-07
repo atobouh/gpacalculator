@@ -30,11 +30,12 @@ class GpaCalculator {
   }
 
   List<CourseEntry> parseCsv(String csvText) {
-    final lines = const LineSplitter()
-        .convert(csvText)
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
+    final lines =
+        const LineSplitter()
+            .convert(csvText)
+            .map((line) => line.trim())
+            .where((line) => line.isNotEmpty)
+            .toList();
 
     if (lines.isEmpty) {
       throw const FormatException('CSV is empty.');
@@ -71,8 +72,12 @@ class GpaCalculator {
     return parsed;
   }
 
-  String toCsv(GpaReport report) {
+  String toCsv(GpaReport report, {String? studentName}) {
+    final normalizedName = studentName?.trim() ?? '';
+
     final rows = <List<String>>[
+      if (normalizedName.isNotEmpty) ['Student Name', normalizedName, '', ''],
+      if (normalizedName.isNotEmpty) ['', '', '', ''],
       ['Subject', 'Grade', 'Point', 'Status'],
       ...report.courses.map(
         (course) => [

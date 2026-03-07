@@ -42,6 +42,7 @@ class GpaHomePage extends StatefulWidget {
 }
 
 class _GpaHomePageState extends State<GpaHomePage> {
+  final TextEditingController _studentNameController = TextEditingController();
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _scoreController = TextEditingController();
   final GradeParser _gradeParser = const GradeParser();
@@ -69,9 +70,11 @@ class _GpaHomePageState extends State<GpaHomePage> {
     courses: _courses,
     passingThreshold: _passingThreshold,
   );
+  String get _studentName => _studentNameController.text.trim();
 
   @override
   void dispose() {
+    _studentNameController.dispose();
     _subjectController.dispose();
     _scoreController.dispose();
     super.dispose();
@@ -155,7 +158,7 @@ class _GpaHomePageState extends State<GpaHomePage> {
     }
 
     final report = _report;
-    final csv = _calculator.toCsv(report);
+    final csv = _calculator.toCsv(report, studentName: _studentName);
     final bytes = Uint8List.fromList(utf8.encode(csv));
     final date = DateTime.now().toIso8601String().split('T').first;
 
@@ -242,15 +245,17 @@ class _GpaHomePageState extends State<GpaHomePage> {
   }
 
   Widget _header() {
+    final studentName = _studentName;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'GPA Calculator',
                   style: TextStyle(
                     fontSize: 32,
@@ -259,13 +264,24 @@ class _GpaHomePageState extends State<GpaHomePage> {
                     color: Color(0xFF1C1C1E),
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   'OOP + Lambdas (Dart)',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF8E8E93),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  studentName.isEmpty
+                      ? 'Student: Not set'
+                      : 'Student: $studentName',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0A7E51),
                   ),
                 ),
               ],
@@ -451,6 +467,16 @@ class _GpaHomePageState extends State<GpaHomePage> {
             ],
           ),
           const SizedBox(height: 16),
+          TextField(
+            controller: _studentNameController,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (_) => setState(() {}),
+            decoration: _inputDecoration(
+              hint: 'Student Name',
+              icon: Icons.person_outline,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
