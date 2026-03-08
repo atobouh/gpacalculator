@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -41,6 +42,7 @@ class GpaHomePage extends StatefulWidget {
 }
 
 class _GpaHomePageState extends State<GpaHomePage> {
+  final TextEditingController _studentNameController = TextEditingController();
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _scoreController = TextEditingController();
   final GradeParser _gradeParser = const GradeParser();
@@ -68,9 +70,11 @@ class _GpaHomePageState extends State<GpaHomePage> {
     courses: _courses,
     passingThreshold: _passingThreshold,
   );
+  String get _studentName => _studentNameController.text.trim();
 
   @override
   void dispose() {
+    _studentNameController.dispose();
     _subjectController.dispose();
     _scoreController.dispose();
     super.dispose();
@@ -147,6 +151,37 @@ class _GpaHomePageState extends State<GpaHomePage> {
     }
   }
 
+  Future<void> _exportCsv() async {
+    if (_courses.isEmpty) {
+      _showMessage('Add at least one course before exporting.', isError: true);
+      return;
+    }
+
+    final report = _report;
+    final csv = _calculator.toCsv(report, studentName: _studentName);
+    final bytes = Uint8List.fromList(utf8.encode(csv));
+    final date = DateTime.now().toIso8601String().split('T').first;
+
+    try {
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save GPA report as CSV',
+        fileName: 'gpa_report_$date.csv',
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+        bytes: bytes,
+      );
+
+      if (path == null) {
+        _showMessage('CSV export canceled.');
+        return;
+      }
+
+      _showMessage('CSV exported successfully.');
+    } catch (_) {
+      _showMessage('Failed to export CSV file.', isError: true);
+    }
+  }
+
   void _clearCourses() {
     setState(_courses.clear);
   }
@@ -210,15 +245,17 @@ class _GpaHomePageState extends State<GpaHomePage> {
   }
 
   Widget _header() {
+    final studentName = _studentName;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'GPA Calculator',
                   style: TextStyle(
                     fontSize: 32,
@@ -227,13 +264,24 @@ class _GpaHomePageState extends State<GpaHomePage> {
                     color: Color(0xFF1C1C1E),
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   'OOP + Lambdas (Dart)',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF8E8E93),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  studentName.isEmpty
+                      ? 'Student: Not set'
+                      : 'Student: $studentName',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0A7E51),
                   ),
                 ),
               ],
@@ -305,11 +353,15 @@ class _GpaHomePageState extends State<GpaHomePage> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF1C1C1E), Color(0xFF6A6A72)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ).createShader(bounds),
+                            shaderCallback:
+                                (bounds) => const LinearGradient(
+                                  colors: [
+                                    Color(0xFF1C1C1E),
+                                    Color(0xFF6A6A72),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ).createShader(bounds),
                             child: Text(
                               report.gpa.toStringAsFixed(2),
                               style: TextStyle(
@@ -398,6 +450,14 @@ class _GpaHomePageState extends State<GpaHomePage> {
               ),
               const SizedBox(width: 8),
               _pillButton(
+                icon: Icons.download_outlined,
+                label: 'Export',
+                textColor: const Color(0xFF0A7E51),
+                bgColor: const Color(0x140A7E51),
+                onTap: _exportCsv,
+              ),
+              const SizedBox(width: 8),
+              _pillButton(
                 icon: Icons.delete_outline,
                 label: 'Clear',
                 textColor: const Color(0xFFFF3B30),
@@ -407,6 +467,16 @@ class _GpaHomePageState extends State<GpaHomePage> {
             ],
           ),
           const SizedBox(height: 16),
+          TextField(
+            controller: _studentNameController,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (_) => setState(() {}),
+            decoration: _inputDecoration(
+              hint: 'Student Name',
+              icon: Icons.person_outline,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -550,136 +620,143 @@ class _GpaHomePageState extends State<GpaHomePage> {
             ],
             border: Border.all(color: const Color(0x0D3C3C43)),
           ),
-          child: report.courses.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(
-                    child: Text(
-                      'No courses available.',
-                      style: TextStyle(
-                        color: Color(0xFF8E8E93),
-                        fontWeight: FontWeight.w500,
+          child:
+              report.courses.isEmpty
+                  ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        'No courses available.',
+                        style: TextStyle(
+                          color: Color(0xFF8E8E93),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: report.courses.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, color: Color(0x1A3C3C43)),
-                  itemBuilder: (context, index) {
-                    final course = report.courses[index];
-                    final isPass = course.isPassing(report.passingThreshold);
-                    final scoreLabel = _displayGradeLabel(course.gradeInput);
+                  )
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: report.courses.length,
+                    separatorBuilder:
+                        (context, index) =>
+                            const Divider(height: 1, color: Color(0x1A3C3C43)),
+                    itemBuilder: (context, index) {
+                      final course = report.courses[index];
+                      final isPass = course.isPassing(report.passingThreshold);
+                      final scoreLabel = _displayGradeLabel(course.gradeInput);
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isPass
-                                  ? const Color(0xFFF2F2F7)
-                                  : const Color(0x14FF3B30),
-                            ),
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                                color: isPass
-                                    ? const Color(0xFF8E8E93)
-                                    : const Color(0xFFFF3B30),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color:
+                                    isPass
+                                        ? const Color(0xFFF2F2F7)
+                                        : const Color(0x14FF3B30),
+                              ),
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                  color:
+                                      isPass
+                                          ? const Color(0xFF8E8E93)
+                                          : const Color(0xFFFF3B30),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    course.subject,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1C1C1E),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      if (!isPass) ...[
+                                        const Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 14,
+                                          color: Color(0xFFFF3B30),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ] else ...[
+                                        const Icon(
+                                          Icons.trending_up,
+                                          size: 14,
+                                          color: Color(0xFF34C759),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Text(
+                                        'Score: $scoreLabel',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              isPass
+                                                  ? const Color(0xFF8E8E93)
+                                                  : const Color(0xFFFF3B30),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  course.subject,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1C1C1E),
+                                  course.gradePoint.toStringAsFixed(2),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color:
+                                        isPass
+                                            ? const Color(0xFF1C1C1E)
+                                            : const Color(0xFFFF3B30),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    if (!isPass) ...[
-                                      const Icon(
-                                        Icons.warning_amber_rounded,
-                                        size: 14,
-                                        color: Color(0xFFFF3B30),
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ] else ...[
-                                      const Icon(
-                                        Icons.trending_up,
-                                        size: 14,
-                                        color: Color(0xFF34C759),
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Text(
-                                      'Score: $scoreLabel',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: isPass
+                                Text(
+                                  'PTS',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1,
+                                    color:
+                                        isPass
                                             ? const Color(0xFF8E8E93)
                                             : const Color(0xFFFF3B30),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                course.gradePoint.toStringAsFixed(2),
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: isPass
-                                      ? const Color(0xFF1C1C1E)
-                                      : const Color(0xFFFF3B30),
-                                ),
-                              ),
-                              Text(
-                                'PTS',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1,
-                                  color: isPass
-                                      ? const Color(0xFF8E8E93)
-                                      : const Color(0xFFFF3B30),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
         ),
       ],
     );
@@ -799,9 +876,8 @@ class _GpaHomePageState extends State<GpaHomePage> {
         color: Color(0xFF8E8E93),
         fontWeight: FontWeight.w500,
       ),
-      prefixIcon: icon != null
-          ? Icon(icon, color: const Color(0xFF8E8E93))
-          : null,
+      prefixIcon:
+          icon != null ? Icon(icon, color: const Color(0xFF8E8E93)) : null,
       suffixText: suffix,
       suffixStyle: const TextStyle(
         color: Color(0xFF8E8E93),
